@@ -29,32 +29,42 @@ jobs:
             --output-show-line-numbers \
             --include "**/*.cs,**/*.csproj,**/*.sln,**/*.lua,**/*.h,**/*.hpp,**/*.c,**/*.cpp,**/*.cc,**/*.inl,**/*.ixx,**/*.shader,**/*.hlsl,**/*.glsl,**/*.vert,**/*.frag"
 
-      - name: Install Google Drive uploader
+      - name: Install Google Drive libraries
         run: |
           python -m pip install --upgrade pip
           pip install google-api-python-client google-auth google-auth-httplib2
 
-      - name: Upload to Google Drive
+      - name: Upload Repomix to Google Drive
         env:
-          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
           GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
         run: |
           python <<'PY'
           import os
-          import json
-          from google.oauth2 import service_account
+
+          from google.oauth2.credentials import Credentials
           from googleapiclient.discovery import build
           from googleapiclient.http import MediaFileUpload
 
-          credentials = service_account.Credentials.from_service_account_info(
-              json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]),
-              scopes=["https://www.googleapis.com/auth/drive.file"]
+          SCOPES = [
+              "https://www.googleapis.com/auth/drive.file"
+          ]
+
+          credentials = Credentials(
+              token=None,
+              refresh_token=os.environ["GOOGLE_REFRESH_TOKEN"],
+              token_uri="https://oauth2.googleapis.com/token",
+              client_id=os.environ["GOOGLE_CLIENT_ID"],
+              client_secret=os.environ["GOOGLE_CLIENT_SECRET"],
+              scopes=SCOPES,
           )
 
           service = build(
               "drive",
               "v3",
-              credentials=credentials
+              credentials=credentials,
           )
 
           folder_id = os.environ["GOOGLE_DRIVE_FOLDER_ID"]
@@ -70,21 +80,23 @@ jobs:
           result = service.files().list(
               q=query,
               spaces="drive",
-              fields="files(id,name)"
+              fields="files(id,name)",
           ).execute()
 
           media = MediaFileUpload(
               "repomix-output.md",
               mimetype="text/markdown",
-              resumable=True
+              resumable=True,
           )
 
-          if result["files"]:
-              file_id = result["files"][0]["id"]
+          files = result.get("files", [])
+
+          if files:
+              file_id = files[0]["id"]
 
               service.files().update(
                   fileId=file_id,
-                  media_body=media
+                  media_body=media,
               ).execute()
 
               print("Updated existing Google Drive file.")
@@ -92,19 +104,22 @@ jobs:
           else:
               metadata = {
                   "name": file_name,
-                  "parents": [folder_id]
+                  "parents": [folder_id],
               }
 
-              service.files().create(
+              created = service.files().create(
                   body=metadata,
                   media_body=media,
-                  fields="id,name"
+                  fields="id,name",
               ).execute()
 
-              print("Created new Google Drive file.")
+              print(
+                  f"Created Google Drive file: "
+                  f"{created['name']} ({created['id']})"
+              )
           PY
 
-      - name: Upload GitHub Actions artifact
+      - name: Upload GitHub Artifact
         uses: actions/upload-artifact@v4
         with:
           name: OpenTaiko-Source-Code-Repomix
