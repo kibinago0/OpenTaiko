@@ -2,6 +2,7 @@
 
 ## [0.6.0.111] - 2026-09-12 (Beta)
 
+Updated the workflow to upload source code to Google Drive and modified artifact naming.
 This workflow automates the Repomix process to format code files, excluding specified file types and directories.
 - [Fix] Graphics Device and inputs not being properly initialized when used with OpenTaiko Hub 0.2 or newer
 
