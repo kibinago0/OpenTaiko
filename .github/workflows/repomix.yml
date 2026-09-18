@@ -1,0 +1,34 @@
+name: Repomix - Code Only
+
+on:
+  workflow_dispatch:
+
+jobs:
+  repomix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Repomix
+        run: |
+          npx repomix@1.18.0 \
+            --style markdown \
+            --remove-empty-lines \
+            --output-show-line-numbers \
+            --ignore "**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.bmp,**/*.webp,**/*.ico,**/*.svg,**/*.mp3,**/*.wav,**/*.ogg,**/*.flac,**/*.mp4,**/*.avi,**/*.webm,**/*.ttf,**/*.otf,**/*.woff,**/*.woff2,**/bin/**,**/obj/**,**/.git/**,**/node_modules/**"
+
+      - name: Upload Repomix
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenTaiko-Code-Repomix
+          path: repomix-output.md
+          if-no-files-found: error
