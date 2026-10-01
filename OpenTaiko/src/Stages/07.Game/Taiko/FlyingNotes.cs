@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using FDK;
 
 namespace OpenTaiko;
@@ -9,6 +9,18 @@ internal class FlyingNotes : CActivity {
 	public FlyingNotes() {
 		base.IsDeActivated = true;
 	}
+
+	// 軌道座標データ (指定された全31点・30区間)
+	private static readonly (double X, double Y)[] FlyingPath = new (double X, double Y)[]
+	{
+		(348, 192), (363, 163), (380, 135), (399, 109), (420, 83),
+		(442, 59),  (465, 37),  (490, 16),  (516, -3),  (544, -20),
+		(572, -36), (602, -49), (633, -60), (664, -69), (696, -76),
+		(729, -80), (761, -83), (794, -83), (826, -81), (858, -78),
+		(890, -72), (922, -64), (953, -54), (983, -41), (1012, -26),
+		(1040, -9), (1067, 9),  (1092, 30), (1116, 52), (1139, 75),
+		(1160, 100)
+	};
 
 
 	// メソッド
@@ -35,8 +47,9 @@ internal class FlyingNotes : CActivity {
 					Flying[i].Width = (Math.Abs((OpenTaiko.Skin.Game_Effect_FlyingNotes_EndPoint_X[nPlayer] - StartPointX[nPlayer])) / 2);
 					//Console.WriteLine("{0}, {1}", width2P, height2P);
 					Flying[i].Theta = ((Math.Atan2(Flying[i].Height, Flying[i].Width) * 180.0) / Math.PI);
-					Flying[i].Counter = new CCounter(0, 140, OpenTaiko.Skin.Game_Effect_FlyingNotes_Timer, OpenTaiko.Timer);
-					//Flying[i].Counter = new CCounter(0, 200000, CDTXMania.Skin.Game_Effect_FlyingNotes_Timer, CDTXMania.Timer);
+
+					// タイマーの初期化: 全30区間 x 16.67ms = 約500.1ms (0〜500の範囲で1ms刻み)
+					Flying[i].Counter = new CCounter(0, 500, 1, OpenTaiko.Timer);
 
 					Flying[i].IncreaseX = (1.00 * Math.Abs((OpenTaiko.Skin.Game_Effect_FlyingNotes_EndPoint_X[nPlayer] - StartPointX[nPlayer]))) / (180);
 					Flying[i].IncreaseY = (1.00 * Math.Abs((OpenTaiko.Skin.Game_Effect_FlyingNotes_EndPoint_Y[nPlayer] - OpenTaiko.Skin.Game_Effect_FlyingNotes_StartPoint_Y[nPlayer]))) / (180);
@@ -83,68 +96,37 @@ internal class FlyingNotes : CActivity {
 						OpenTaiko.stageGameScreen.actGauge.Start(Flying[i].Lane, Flying[i].GameType, ENoteJudge.Perfect, Flying[i].Player);
 						OpenTaiko.stageGameScreen.actChipEffects.Start(Flying[i].Player, Flying[i].Lane, Flying[i].GameType);
 					}
+
+					// 16.67msごとに指定座標間を直線移動（線形補間）
+					double totalTimeMs = Flying[i].Counter.CurrentValue; // 0 ～ 500 ms
+					double segmentTimeMs = 16.67; // 1区間あたりの時間
+
+					int segmentIndex = (int)(totalTimeMs / segmentTimeMs);
+					if (segmentIndex >= FlyingPath.Length - 1) {
+						segmentIndex = FlyingPath.Length - 2;
+					}
+
+					double t = (totalTimeMs - (segmentIndex * segmentTimeMs)) / segmentTimeMs;
+					if (t < 0) t = 0;
+					if (t > 1) t = 1;
+
+					var pStart = FlyingPath[segmentIndex];
+					var pEnd = FlyingPath[segmentIndex + 1];
+
+					double currentX = pStart.X + (pEnd.X - pStart.X) * t;
+					double currentY = pStart.Y + (pEnd.Y - pStart.Y) * t;
+
+					Flying[i].X = currentX + OpenTaiko.stageGameScreen.GetJPOSCROLLX(Flying[i].Player);
+					Flying[i].Y = currentY + OpenTaiko.stageGameScreen.GetJPOSCROLLY(Flying[i].Player);
+
+					// 花火・パーティクル発生判定
 					for (int n = Flying[i].OldValue; n < Flying[i].Counter.CurrentValue; n += 16) {
-						int endX;
-						int endY;
-
-						if (OpenTaiko.ConfigIni.bAIBattleMode) {
-							endX = OpenTaiko.Skin.Game_Effect_FlyingNotes_EndPoint_X_AI[Flying[i].Player];
-							endY = OpenTaiko.Skin.Game_Effect_FlyingNotes_EndPoint_Y_AI[Flying[i].Player];
-						} else {
-							endX = OpenTaiko.Skin.Game_Effect_FlyingNotes_EndPoint_X[Flying[i].Player];
-							endY = OpenTaiko.Skin.Game_Effect_FlyingNotes_EndPoint_Y[Flying[i].Player];
-						}
-
-						int movingDistanceX = endX - StartPointX[Flying[i].Player];
-						int movingDistanceY = endY - OpenTaiko.Skin.Game_Effect_FlyingNotes_StartPoint_Y[Flying[i].Player];
-
-						/*
-                        if (TJAPlayer3.Skin.Game_Effect_FlyingNotes_IsUsingEasing)
-                        {
-                            Flying[i].X = (Flying[i].StartPointX + movingDistanceX + ((-Math.Cos(Flying[i].Counter.n現在の値 * (Math.PI / 180)) * movingDistanceX))) - 85;
-                            //Flying[i].X += (Math.Cos(Flying[i].Counter.n現在の値 * (Math.PI / 180))) * Flying[i].Increase;
-                        }
-                        else
-                        {
-                            Flying[i].X += Flying[i].IncreaseX;
-                        }
-                        */
-
-						double value = (Flying[i].Counter.CurrentValue / 140.0);
-
-						Flying[i].X = StartPointX[Flying[i].Player] + OpenTaiko.stageGameScreen.GetJPOSCROLLX(Flying[i].Player) + (movingDistanceX * value);
-						Flying[i].Y = OpenTaiko.Skin.Game_Effect_FlyingNotes_StartPoint_Y[Flying[i].Player] + OpenTaiko.stageGameScreen.GetJPOSCROLLY(Flying[i].Player) + (int)(movingDistanceY * value);
-
-						if (OpenTaiko.ConfigIni.bAIBattleMode) {
-							Flying[i].Y += Math.Sin(value * Math.PI) * ((Flying[i].Player == 0 ? -OpenTaiko.Skin.Game_Effect_FlyingNotes_Sine : OpenTaiko.Skin.Game_Effect_FlyingNotes_Sine) / 3.0);
-						} else {
-							Flying[i].Y += Math.Sin(value * Math.PI) * (Flying[i].Player == 0 ? -OpenTaiko.Skin.Game_Effect_FlyingNotes_Sine : OpenTaiko.Skin.Game_Effect_FlyingNotes_Sine);
-						}
-
-						if (OpenTaiko.Skin.Game_Effect_FlyingNotes_IsUsingEasing) {
-						} else {
-						}
-
 						if (n % OpenTaiko.Skin.Game_Effect_FireWorks_Timing == 0 && Flying[i].Counter.CurrentValue > 18) {
 							if (Flying[i].ForceFirework ?? NotesManager.IsBigNoteTaiko(Flying[i].Lane, Flying[i].GameType)) {
 								OpenTaiko.stageGameScreen.FireWorks.Start(Flying[i].Lane, Flying[i].GameType, Flying[i].Player, Flying[i].X, Flying[i].Y);
 							}
 						}
-
-						/*
-                        if (Flying[i].Player == 0)
-                        {
-                            Flying[i].Y = ((TJAPlayer3.Skin.Game_Effect_FlyingNotes_StartPoint_Y[Flying[i].Player]) + -Math.Sin(Flying[i].Counter.n現在の値 * (Math.PI / 180)) * 559) + 329;
-                            Flying[i].Y -= Flying[i].IncreaseY * Flying[i].Counter.n現在の値;
-                        }
-                        else
-                        {
-                            Flying[i].Y = ((TJAPlayer3.Skin.Game_Effect_FlyingNotes_StartPoint_Y[Flying[i].Player]) + Math.Sin(Flying[i].Counter.n現在の値 * (Math.PI / 180)) * 559) - 329;
-                            Flying[i].Y += Flying[i].IncreaseY * Flying[i].Counter.n現在の値;
-                        }
-                        */
 					}
-					//Flying[i].OldValue = Flying[i].Counter.n現在の値;
 
 					NotesManager.DisplayNote(Flying[i].Player, (int)Flying[i].X, (int)Flying[i].Y, Flying[i].Lane, Flying[i].GameType);
 				}
