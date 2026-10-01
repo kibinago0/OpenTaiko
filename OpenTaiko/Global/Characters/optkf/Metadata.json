@@ -1,0 +1,12 @@
+{
+	"name" : {
+		"strings": {
+			"default": "5段",
+			"es": "Nadie",
+			"ru": "Никто",
+			"zh": "不使用"
+		}
+	},
+    "rarity": "Common",
+	"author": "",
+}
