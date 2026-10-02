@@ -1057,21 +1057,24 @@ internal class CConfigIni : INotifyPropertyChanged {
 
 		#region [ Skinパスの絶対パス→相対パス変換 ]
 
-		Uri uriRoot = new Uri(System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ,
-			"System" + System.IO.Path.DirectorySeparatorChar));
-		if (strSystemSkinSubfolderFullName != null && strSystemSkinSubfolderFullName.Length == 0) {
+		string systemDir = System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ, "System" + System.IO.Path.DirectorySeparatorChar);
+		if (string.IsNullOrEmpty(strSystemSkinSubfolderFullName)) {
 			// Config.iniが空の状態でDTXManiaをViewerとして起動_終了すると、strSystemSkinSubfolderFullName が空の状態でここに来る。
 			// → 初期値として Default/ を設定する。
-			strSystemSkinSubfolderFullName = System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ,
-				"System" + System.IO.Path.DirectorySeparatorChar + "Default" +
-				System.IO.Path.DirectorySeparatorChar);
+			strSystemSkinSubfolderFullName = System.IO.Path.Combine(systemDir, "Default" + System.IO.Path.DirectorySeparatorChar);
 		}
 
-		Uri uriPath = new Uri(System.IO.Path.Combine(this.strSystemSkinSubfolderFullName,
-			"." + System.IO.Path.DirectorySeparatorChar));
-		string relPath = uriRoot.MakeRelativeUri(uriPath).ToString(); // 相対パスを取得
-		relPath = System.Web.HttpUtility.UrlDecode(relPath); // デコードする
-		relPath = relPath.Replace('/', System.IO.Path.DirectorySeparatorChar); // 区切り文字が\ではなく/なので置換する
+		string relPath;
+		if (System.IO.Path.IsPathRooted(this.strSystemSkinSubfolderFullName) &&
+			!this.strSystemSkinSubfolderFullName.StartsWith(systemDir, StringComparison.OrdinalIgnoreCase)) {
+			relPath = this.strSystemSkinSubfolderFullName;
+		} else {
+			Uri uriRoot = new Uri(systemDir);
+			Uri uriPath = new Uri(System.IO.Path.Combine(this.strSystemSkinSubfolderFullName, "." + System.IO.Path.DirectorySeparatorChar));
+			relPath = uriRoot.MakeRelativeUri(uriPath).ToString(); // 相対パスを取得
+			relPath = System.Web.HttpUtility.UrlDecode(relPath); // デコードする
+			relPath = relPath.Replace('/', System.IO.Path.DirectorySeparatorChar); // 区切り文字が\ではなく/なので置換する
+		}
 
 		#endregion
 
