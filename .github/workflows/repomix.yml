@@ -1,7 +1,9 @@
 name: Repomix - Source Code to Google Drive
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
