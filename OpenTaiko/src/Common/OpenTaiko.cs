@@ -1611,7 +1611,8 @@ internal class OpenTaiko : Game {
 #if !DEBUG
 		catch (Exception e) {
 			Trace.TraceInformation("Skin failed to initialize.");
-			TriggerSystemError(CSystemError.Errno.ENO_SKINNOTFOUND);
+			Trace.TraceError(e.ToString());
+			TriggerSystemError(CSystemError.Errno.ENO_SKINNOTFOUND, e);
 			return;
 			//throw;
 		} finally {
