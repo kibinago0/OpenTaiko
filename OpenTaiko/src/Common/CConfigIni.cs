@@ -425,7 +425,7 @@ internal class CConfigIni : INotifyPropertyChanged {
 	public bool bBufferedInputs;
 	public bool bIsEnabledSystemMenu; // #28200 2012.5.1 yyagi System Menuの使用可否切替
 	public string strSystemPath = "";
-	public string strGlobalPath = ""; // Systemフォルダへのルートパス (空の場合はデフォルトのSystem/を使用)
+	public string strGlobalPath = ""; // Globalフォルダへのルートパス (空の場合はデフォルトのGlobal/を使用)
 	private string strSkinPathRaw = "";
 	public string strSystemSkinSubfolderFullName; // #28195 2012.5.2 yyagi Skin切替用 System/以下のサブフォルダ名
 
@@ -1065,6 +1065,15 @@ internal class CConfigIni : INotifyPropertyChanged {
 		sw.WriteLine("; Systemフォルダへのルートパス。");
 		sw.WriteLine("; System folder root path.");
 		sw.WriteLine("SystemPath={0}", this.strSystemPath ?? "");
+		sw.WriteLine();
+
+		#endregion
+
+		#region [ GlobalPath ]
+
+		sw.WriteLine("; Globalフォルダへのルートパス。");
+		sw.WriteLine("; Global folder root path.");
+		sw.WriteLine("GlobalPath={0}", this.strGlobalPath ?? "");
 		sw.WriteLine();
 
 		#endregion
@@ -2070,6 +2079,17 @@ internal class CConfigIni : INotifyPropertyChanged {
 					}
 					this.strSystemPath = path;
 					this.UpdateSkinSubfolderFullName();
+					break;
+				}
+			case "GlobalPath": {
+					string path = value;
+					if (!string.IsNullOrEmpty(path) && !System.IO.Path.IsPathRooted(path)) {
+						path = System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ, path);
+					}
+					if (path.Length > 0 && path[path.Length - 1] != System.IO.Path.DirectorySeparatorChar) {
+						path += System.IO.Path.DirectorySeparatorChar;
+					}
+					this.strGlobalPath = path;
 					break;
 				}
 			case "SkinPath": {

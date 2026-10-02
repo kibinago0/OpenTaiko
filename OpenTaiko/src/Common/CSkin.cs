@@ -613,7 +613,7 @@ internal class CSkin : IDisposable {
 		PrepareReloadSkin();
 	}
 	private string InitializeSkinPathRoot() {
-		strSystemSkinRoot = System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ, "System" + System.IO.Path.DirectorySeparatorChar);
+		strSystemSkinRoot = OpenTaiko.ConfigIni.GetSystemDir();
 		return strSystemSkinRoot;
 	}
 
