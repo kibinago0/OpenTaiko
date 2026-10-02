@@ -424,6 +424,8 @@ internal class CConfigIni : INotifyPropertyChanged {
 	public int nPoliphonicSounds; // #28228 2012.5.1 yyagi レーン毎の最大同時発音数
 	public bool bBufferedInputs;
 	public bool bIsEnabledSystemMenu; // #28200 2012.5.1 yyagi System Menuの使用可否切替
+	public string strSystemPath = ""; // Systemフォルダへのルートパス (空の場合はデフォルトのSystem/を使用)
+	private string strSkinPathRaw = "";
 	public string strSystemSkinSubfolderFullName; // #28195 2012.5.2 yyagi Skin切替用 System/以下のサブフォルダ名
 
 	public void tInitializeAILevel() {
@@ -893,6 +895,8 @@ internal class CConfigIni : INotifyPropertyChanged {
 									// #24820 2013.1.15 yyagi 初期値を4から2に変更。BASS.net使用時の負荷軽減のため。
 									// #24820 2013.1.17 yyagi 初期値を4に戻した。動的なミキサー制御がうまく動作しているため。
 		this.bIsEnabledSystemMenu = true; // #28200 2012.5.1 yyagi System Menuの利用可否切替(使用可)
+		this.strSystemPath = "";
+		this.strSkinPathRaw = "";
 		this.strSystemSkinSubfolderFullName = ""; // #28195 2012.5.2 yyagi 使用中のSkinサブフォルダ名
 		this.bTight = false; // #29500 2012.9.11 kairera0467 TIGHTモード
 
@@ -1055,26 +1059,33 @@ internal class CConfigIni : INotifyPropertyChanged {
 
 		#region [ スキン関連 ]
 
+		#region [ SystemPath ]
+
+		sw.WriteLine("; Systemフォルダへのルートパス。");
+		sw.WriteLine("; System folder root path.");
+		sw.WriteLine("SystemPath={0}", this.strSystemPath ?? "");
+		sw.WriteLine();
+
+		#endregion
+
 		#region [ Skinパスの絶対パス→相対パス変換 ]
 
-		string systemDir = System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ, "System" + System.IO.Path.DirectorySeparatorChar);
-		if (string.IsNullOrEmpty(strSystemSkinSubfolderFullName)) {
+		string systemDir = !string.IsNullOrEmpty(this.strSystemPath)
+			? this.strSystemPath
+			: System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ, "System" + System.IO.Path.DirectorySeparatorChar);
+
+		Uri uriRoot = new Uri(systemDir);
+		if (strSystemSkinSubfolderFullName != null && strSystemSkinSubfolderFullName.Length == 0) {
 			// Config.iniが空の状態でDTXManiaをViewerとして起動_終了すると、strSystemSkinSubfolderFullName が空の状態でここに来る。
 			// → 初期値として Default/ を設定する。
 			strSystemSkinSubfolderFullName = System.IO.Path.Combine(systemDir, "Default" + System.IO.Path.DirectorySeparatorChar);
 		}
 
-		string relPath;
-		if (System.IO.Path.IsPathRooted(this.strSystemSkinSubfolderFullName) &&
-			!this.strSystemSkinSubfolderFullName.StartsWith(systemDir, StringComparison.OrdinalIgnoreCase)) {
-			relPath = this.strSystemSkinSubfolderFullName;
-		} else {
-			Uri uriRoot = new Uri(systemDir);
-			Uri uriPath = new Uri(System.IO.Path.Combine(this.strSystemSkinSubfolderFullName, "." + System.IO.Path.DirectorySeparatorChar));
-			relPath = uriRoot.MakeRelativeUri(uriPath).ToString(); // 相対パスを取得
-			relPath = System.Web.HttpUtility.UrlDecode(relPath); // デコードする
-			relPath = relPath.Replace('/', System.IO.Path.DirectorySeparatorChar); // 区切り文字が\ではなく/なので置換する
-		}
+		Uri uriPath = new Uri(System.IO.Path.Combine(this.strSystemSkinSubfolderFullName,
+			"." + System.IO.Path.DirectorySeparatorChar));
+		string relPath = uriRoot.MakeRelativeUri(uriPath).ToString(); // 相対パスを取得
+		relPath = System.Web.HttpUtility.UrlDecode(relPath); // デコードする
+		relPath = relPath.Replace('/', System.IO.Path.DirectorySeparatorChar); // 区切り文字が\ではなく/なので置換する
 
 		#endregion
 
@@ -1973,6 +1984,28 @@ internal class CConfigIni : INotifyPropertyChanged {
 		}
 	}
 
+		private void UpdateSkinSubfolderFullName() {
+		if (string.IsNullOrEmpty(this.strSkinPathRaw)) return;
+		string value = this.strSkinPathRaw;
+		string absSkinPath = value;
+		if (!System.IO.Path.IsPathRooted(value)) {
+			string baseSysPath = !string.IsNullOrEmpty(this.strSystemPath)
+				? this.strSystemPath
+				: System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ, "System");
+			absSkinPath = System.IO.Path.Combine(baseSysPath, value);
+			Uri u = new Uri(absSkinPath);
+			absSkinPath = u.AbsolutePath.ToString();
+			absSkinPath = System.Web.HttpUtility.UrlDecode(absSkinPath);
+			absSkinPath = absSkinPath.Replace('/', System.IO.Path.DirectorySeparatorChar);
+		}
+
+		if (absSkinPath.Length > 0 && absSkinPath[absSkinPath.Length - 1] != System.IO.Path.DirectorySeparatorChar) {
+			absSkinPath += System.IO.Path.DirectorySeparatorChar;
+		}
+
+		this.strSystemSkinSubfolderFullName = absSkinPath;
+	}
+
 	private void ProcessSystemSection(string key, string value) {
 		switch (key) {
 			case "TJAPath":
@@ -2000,25 +2033,21 @@ internal class CConfigIni : INotifyPropertyChanged {
 			case "IgnoreSongUnlockables":
 				this.bIgnoreSongUnlockables = CConversion.bONorOFF(value[0]);
 				break;
+			case "SystemPath": {
+					string path = value;
+					if (!string.IsNullOrEmpty(path) && !System.IO.Path.IsPathRooted(path)) {
+						path = System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ, path);
+					}
+					if (path.Length > 0 && path[path.Length - 1] != System.IO.Path.DirectorySeparatorChar) {
+						path += System.IO.Path.DirectorySeparatorChar;
+					}
+					this.strSystemPath = path;
+					this.UpdateSkinSubfolderFullName();
+					break;
+				}
 			case "SkinPath": {
-					string absSkinPath = value;
-					if (!System.IO.Path.IsPathRooted(value)) {
-						absSkinPath = System.IO.Path.Combine(OpenTaiko.strEXEのあるフォルダ, "System");
-						absSkinPath = System.IO.Path.Combine(absSkinPath, value);
-						Uri u = new Uri(absSkinPath);
-						absSkinPath = u.AbsolutePath.ToString(); // str4内に相対パスがある場合に備える
-						absSkinPath = System.Web.HttpUtility.UrlDecode(absSkinPath); // デコードする
-						absSkinPath =
-							absSkinPath.Replace('/', System.IO.Path.DirectorySeparatorChar); // 区切り文字が\ではなく/なので置換する
-					}
-
-					if (absSkinPath[absSkinPath.Length - 1] !=
-						System.IO.Path.DirectorySeparatorChar) // フォルダ名末尾に\を必ずつけて、CSkin側と表記を統一する
-					{
-						absSkinPath += System.IO.Path.DirectorySeparatorChar;
-					}
-
-					this.strSystemSkinSubfolderFullName = absSkinPath;
+					this.strSkinPathRaw = value;
+					this.UpdateSkinSubfolderFullName();
 					break;
 				}
 			case nameof(this.PreAssetsLoading):
