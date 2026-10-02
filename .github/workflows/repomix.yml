@@ -1,4 +1,4 @@
-name: Repomix - Source Code to Google Drive
+name: Repomix
 
 on:
   push:
@@ -31,9 +31,12 @@ jobs:
             --output-show-line-numbers \
             --include "**/*.cs,**/*.csproj,**/*.sln,**/*.lua,**/*.h,**/*.hpp,**/*.c,**/*.cpp,**/*.cc,**/*.inl,**/*.ixx,**/*.shader,**/*.hlsl,**/*.glsl,**/*.vert,**/*.frag"
 
+      - name: Rename repomix output
+        run: mv repomix-output.md OpenTaiko-repomix.md
+
       - name: Upload GitHub Artifact
         uses: actions/upload-artifact@v4
         with:
           name: OpenTaiko-Source-Code-Repomix
-          path: repomix-output.md
+          path: OpenTaiko-repomix.md
           if-no-files-found: error
