@@ -59,3 +59,17 @@ Current version : v0.5.4
 - `BOXTYPE` : (Int) Texture to use for the boxes (`3_SongSelect\Bar_Genre` and `3_SongSelect\Difficulty_Select\Difficulty_Back`, Ensou song select screen, Default : Genre id or 0).
 
 - `BOXCHARA` : (Int) Texture to use for the boxes' characters (`3_SongSelect\Box_Chara`, Ensou song select screen, Default : Genre id or 0).
+
+## order.def
+
+Place `order.def` in the same folder as `box.def` to set the default display order of songs in that box. Each `[SongInfo]` entry identifies a song by its exact TJA `TITLE` and `SUBTITLE`. Entries are displayed in the order listed; songs that do not match any entry are displayed afterward in their usual order.
+
+```ini
+[SongInfo]
+TITLE:えびチリ、はじめました
+SUBTITLE:私立恵比寿中学
+
+[SongInfo]
+TITLE:夜の踊り子
+SUBTITLE:
+```

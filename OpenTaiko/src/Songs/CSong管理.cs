@@ -724,6 +724,7 @@ internal class CSongs管理 {
 			if (songNode.nodeType == CSongListNode.ENodeType.BOX) {
 
 				tSongListSortByPath(songNode.childrenList);
+				ApplyOrderDef(Path.Combine(songNode.score[0].ファイル情報.フォルダの絶対パス, "order.def"), songNode.childrenList);
 
 				string newPath = parentName + songNode.ldTitle.GetString("") + "/";
 
@@ -759,6 +760,78 @@ internal class CSongs管理 {
 
 		}
 
+	}
+
+	private static void ApplyOrderDef(string orderDefPath, List<CSongListNode> nodeList) {
+		if (!File.Exists(orderDefPath)) {
+			return;
+		}
+
+		var order = new Dictionary<(string Title, string Subtitle), int>();
+		using (var reader = new StreamReader(orderDefPath, Encoding.GetEncoding(OpenTaiko.sEncType))) {
+			string title = "";
+			string subtitle = "";
+			bool inSongInfo = false;
+			bool hasTitle = false;
+
+			void AddSongInfo() {
+				if (inSongInfo && hasTitle) {
+					order.TryAdd((title, subtitle), order.Count);
+				}
+			}
+
+			string? line;
+			while ((line = reader.ReadLine()) != null) {
+				line = line.Trim();
+				if (line.StartsWith("[", StringComparison.Ordinal)) {
+					AddSongInfo();
+					inSongInfo = line.Equals("[SongInfo]", StringComparison.OrdinalIgnoreCase);
+					title = "";
+					subtitle = "";
+					hasTitle = false;
+					continue;
+				}
+
+				if (!inSongInfo) {
+					continue;
+				}
+
+				int separator = line.IndexOf(':');
+				if (separator < 0) {
+					continue;
+				}
+
+				string key = line[..separator].Trim();
+				string value = line[(separator + 1)..].Trim();
+				if (key.Equals("TITLE", StringComparison.OrdinalIgnoreCase)) {
+					title = value;
+					hasTitle = true;
+				} else if (key.Equals("SUBTITLE", StringComparison.OrdinalIgnoreCase)) {
+					subtitle = value;
+				}
+			}
+
+			AddSongInfo();
+		}
+
+		var reorderedNodes = nodeList
+			.Select((node, index) => {
+				int orderIndex = int.MaxValue;
+				if (node.nodeType is CSongListNode.ENodeType.SCORE or CSongListNode.ENodeType.SCORE_MIDI) {
+					if (order.TryGetValue((node.ldTitle.GetString(""), node.ldSubtitle.GetString("")), out int configuredOrder)) {
+						orderIndex = configuredOrder;
+					}
+				}
+
+				return (Node: node, Index: index, Order: orderIndex);
+			})
+			.OrderBy(entry => entry.Order)
+			.ThenBy(entry => entry.Index)
+			.Select(entry => entry.Node)
+			.ToList();
+
+		nodeList.Clear();
+		nodeList.AddRange(reorderedNodes);
 	}
 	//-----------------
 	#endregion
