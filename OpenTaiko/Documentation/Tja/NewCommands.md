@@ -62,7 +62,7 @@ Current version : v0.5.4
 
 ## order.def
 
-Place `order.def` in the same folder as `box.def` to set the default display order of songs in that box. Each `[SongInfo]` entry identifies a song by its exact TJA `TITLE` and `SUBTITLE`. Entries are displayed in the order listed; songs that do not match any entry are displayed afterward in their usual order.
+Place `order.def` in the same folder as `box.def` to set the default display order of songs in that box. Each `[SongInfo]` entry identifies a song by its exact TJA `TITLE` and `SUBTITLE`. Language-specific fields such as `TITLEJA` and `SUBTITLEJA` are also supported and are used when that language is selected. Entries are displayed in the order listed; songs that do not match any entry are displayed afterward in their usual order.
 
 ```ini
 [SongInfo]

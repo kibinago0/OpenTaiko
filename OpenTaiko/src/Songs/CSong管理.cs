@@ -769,14 +769,14 @@ internal class CSongs管理 {
 
 		var order = new Dictionary<(string Title, string Subtitle), int>();
 		using (var reader = new StreamReader(orderDefPath, Encoding.GetEncoding(OpenTaiko.sEncType))) {
-			string title = "";
-			string subtitle = "";
+			var title = new CLocalizationData();
+			var subtitle = new CLocalizationData();
 			bool inSongInfo = false;
 			bool hasTitle = false;
 
 			void AddSongInfo() {
 				if (inSongInfo && hasTitle) {
-					order.TryAdd((title, subtitle), order.Count);
+					order.TryAdd((title.GetString(""), subtitle.GetString("")), order.Count);
 				}
 			}
 
@@ -786,8 +786,8 @@ internal class CSongs管理 {
 				if (line.StartsWith("[", StringComparison.Ordinal)) {
 					AddSongInfo();
 					inSongInfo = line.Equals("[SongInfo]", StringComparison.OrdinalIgnoreCase);
-					title = "";
-					subtitle = "";
+					title = new CLocalizationData();
+					subtitle = new CLocalizationData();
 					hasTitle = false;
 					continue;
 				}
@@ -803,11 +803,13 @@ internal class CSongs管理 {
 
 				string key = line[..separator].Trim();
 				string value = line[(separator + 1)..].Trim();
-				if (key.Equals("TITLE", StringComparison.OrdinalIgnoreCase)) {
-					title = value;
+				if (key.StartsWith("TITLE", StringComparison.OrdinalIgnoreCase)) {
+					string language = key.Length == "TITLE".Length ? "default" : key["TITLE".Length..].ToLowerInvariant();
+					title.SetString(language, value);
 					hasTitle = true;
-				} else if (key.Equals("SUBTITLE", StringComparison.OrdinalIgnoreCase)) {
-					subtitle = value;
+				} else if (key.StartsWith("SUBTITLE", StringComparison.OrdinalIgnoreCase)) {
+					string language = key.Length == "SUBTITLE".Length ? "default" : key["SUBTITLE".Length..].ToLowerInvariant();
+					subtitle.SetString(language, value);
 				}
 			}
 
