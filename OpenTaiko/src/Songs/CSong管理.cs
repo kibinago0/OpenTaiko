@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using OpenTaiko.CSongListNodeComparers;
@@ -767,8 +767,13 @@ internal class CSongs管理 {
 			return;
 		}
 
+		string? text = CJudgeTextEncoding.ReadTextFile(orderDefPath);
+		if (string.IsNullOrEmpty(text)) {
+			return;
+		}
+
 		var order = new Dictionary<(string Title, string Subtitle), int>();
-		using (var reader = new StreamReader(orderDefPath, Encoding.GetEncoding(OpenTaiko.sEncType))) {
+		using (var reader = new StringReader(text)) {
 			var title = new CLocalizationData();
 			var subtitle = new CLocalizationData();
 			bool inSongInfo = false;
